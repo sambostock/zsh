@@ -209,27 +209,15 @@ elif [[ -d "${gitdir}/rebase-merge" ]]; then
                 return 0
                 ;; 
             (''(p|pick|e|edit|r|reword|f|fixup|s|squash)' '*)
-                # The line is of the form "pick $hash $subject".
-                # Just strip the verb and we're good to go.
-                p=${p#* }
+                # Typically, the line is of the form "pick $longhash $subject\n".
                 # Special case: in an interactive rebase, if the user wrote "p $shorthash\n"
                 # in the editor (without a description after the hash), then the .../done
                 # file will contain "p $longhash $shorthash\n" (git 2.11.0) or "pick $longhash\n"
                 # (git 2.19.0).
-                if [[ $p != *\ * ]]; then
-                        # The line is of the form "pick $longhash\n"
-                        #
-                        # Mark the log message subject as unknown.
-                        # TODO: Can we performantly obtain the subject?
-                        p+=" ?"
-                elif (( ${#${p//[^ ]}} == 1 )) && [[ ${p%% *} == ${p#* }* ]]; then
-                        # The line is of the form "p $longhash $shorthash\n"
-                        #
-                        # The shorthash is superfluous, so discard it, and mark
-                        # the log message subject as unknown.
-                        # TODO: Can we performantly obtain the subject?
-                        p="${p%% *} ?"
-                fi
+                # Given we don't reliably have the subject, and the full hash is needlessly long
+                # for a prompt, we simply extract the hash (second word) and delegate to git to
+                # format it as "$shorthash $subject" according to git's hash abbreviation config.
+                p=$(${vcs_comm[cmd]} log -1 --pretty=format:'%h %s' $p[(w)2])
                 ;;
             (''(x|exec) *)
                 # The line is of the form 'exec foo bar baz' where 'foo bar
